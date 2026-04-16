@@ -1,0 +1,161 @@
+import { useEffect, useState, useRef } from "react";
+import TourCard from "./TourCard";
+import SectionHeading from "../common/SectionHeading";
+import PrimaryButton from "../common/PrimaryButton";
+
+export default function MuirWoodsSection({
+  tours = [],
+  sectionTitle = "",
+  moreDetailsText = "MORE DETAILS",
+  viewAllText = "VIEW ALL"
+}) {
+
+
+
+//   const [tours, setTours] = useState([]);
+  const [cardsToShow, setCardsToShow] = useState(3);
+  const [currentIndex, setCurrentIndex] = useState(3);
+  const [transition, setTransition] = useState(true);
+
+  const trackRef = useRef(null);
+
+
+  /* ================= RESPONSIVE ================= */
+  useEffect(() => {
+    const updateCards = () => {
+      const width = window.innerWidth;
+
+      if (width < 670) setCardsToShow(1);
+      else if (width < 1024) setCardsToShow(2);
+      else setCardsToShow(3);
+    };
+
+    updateCards();
+    window.addEventListener("resize", updateCards);
+    return () => window.removeEventListener("resize", updateCards);
+  }, []);
+
+  /* ================= CLONES ================= */
+  const extendedTours =
+    tours.length > 0
+      ? [...tours.slice(-cardsToShow), ...tours, ...tours.slice(0, cardsToShow)]
+      : [];
+
+  /* ================= AUTO SLIDE ================= */
+  useEffect(() => {
+    if (!tours.length) return;
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => prev + 1);
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [tours.length]);
+
+  /* ================= MOVE SLIDER ================= */
+  useEffect(() => {
+    if (!trackRef.current) return;
+
+    const translateValue = (100 / cardsToShow) * currentIndex;
+
+    trackRef.current.style.transition = transition
+      ? "transform 0.6s ease"
+      : "none";
+
+    trackRef.current.style.transform = `translateX(-${translateValue}%)`;
+  }, [currentIndex, cardsToShow, transition]);
+
+  useEffect(() => {
+    setCurrentIndex(cardsToShow);
+  }, [cardsToShow]);
+
+  /* ================= LOOP FIX ================= */
+  const handleTransitionEnd = () => {
+    if (currentIndex >= tours.length + cardsToShow) {
+      setTransition(false);
+      setCurrentIndex(cardsToShow);
+    }
+
+    if (currentIndex < cardsToShow) {
+      setTransition(false);
+      setCurrentIndex(tours.length + cardsToShow - 1);
+    }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTransition(true);
+      });
+    });
+  };
+
+  const activeDot =
+    tours.length > 0
+      ? (currentIndex - cardsToShow + tours.length) % tours.length
+      : 0;
+
+  return (
+    <section className="py-20 bg-white overflow-hidden">
+
+      {/* Section Heading */}
+      <SectionHeading>
+  {sectionTitle}
+</SectionHeading>
+
+
+      <div className="relative w-full max-w-[1200px] mx-auto overflow-hidden">
+
+        <div
+          ref={trackRef}
+          onTransitionEnd={handleTransitionEnd}
+          className="flex"
+        >
+          {extendedTours.map((tour, index) => (
+            <div
+              key={index}
+              className="flex-shrink-0 px-3"
+              style={{
+                width: `${100 / cardsToShow}%`,
+              }}
+            >
+              <TourCard
+  image={tour?.tour_thumbnail}
+  title={tour?.tour_title}
+  description={tour?.tour_top_header}
+  reviews={tour?.review_count}
+  badges={["POPULAR", "RECOMMENDED"]}
+  buttonText={moreDetailsText}
+/>
+
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Dots */}
+      <div className="flex justify-center gap-4 mt-8">
+        {tours.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => {
+              setTransition(true);
+              setCurrentIndex(index + cardsToShow);
+            }}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              index === activeDot
+                ? "bg-[#3f6f1d] scale-110"
+                : "bg-gray-300"
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* View All Button */}
+      <div className="flex justify-center mt-12">
+        <PrimaryButton variant="large">
+  {viewAllText}
+</PrimaryButton>
+
+      </div>
+    </section>
+  );
+}
